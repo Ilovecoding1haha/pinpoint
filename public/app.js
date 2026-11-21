@@ -1,4 +1,3 @@
-const WEBHOOK = "/api/alert";
 const $ = (id) => document.getElementById(id);
 const log = (m, cls = "") => {
   const l = $("log");
@@ -16,7 +15,7 @@ const setStatus = (t, ok = false) => {
 let coords = null;
 let address = "";
 let fingerprint = "";
-let state = "idle";
+let busy = false;
 
 function buildFingerprint() {
   const parts = [
@@ -35,28 +34,36 @@ async function getIp() {
     const j = await r.json();
     $("dIp").textContent = j.ip;
     return j.ip;
-  } catch { $("dIp").textContent = "unavailable"; return null; }
+  } catch {
+    $("dIp").textContent = "unavailable";
+    return null;
+  }
 }
 
 async function reverseGeo(lat, lon) {
   try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
+    );
     const j = await r.json();
     address = j.display_name || "";
-    $("dAddr").textContent = address || "unresolved";
-  } catch { $("dAddr").textContent = "unresolved"; }
+    const a = $("dAddr");
+    if (address) {
+      a.textContent = address;
+      a.style.cssText = "cursor:pointer;color:var(--accent2);text-decoration:underline";
+      a.title = "Open in Google Maps";
+      a.onclick = () =>
+        window.open(
+          `https://www.google.com/maps/search/?api=1&query=\${encodeURIComponent(address)}`,
+          "_blank"
+        );
+    } else {
+      a.textContent = "unresolved";
+    }
+  } catch {
+    \$("dAddr").textContent = "unresolved";
+  }
 }
 
-// dept chips
-const depts = ["NYPD","LAPD","CPD","SFPD","MDPD","BPD","PPD","HPD","DPD","APD","SPD","MPD","Philly PD","Bexar SO","Clark SO"];
-$("deptlist").innerHTML = depts.map(d => `<span class="dept">\${d}</span>`).join("");
-
-// arm
-\$("armBtn").addEventListener("click", () => {
-  if (!navigator.geolocation) { log("Geolocation unsupported", "err"); return; }
-  \$("armBtn").disabled = true;
-  setStatus("Acquiring GPS lock…");
-  log("Requesting location permission", "warn");
-
-  navigator.geolocation.getCurrentPosition(async (pos) => {
-   
+function setCoordsLinks(lat, lon) {
+  \$("d
